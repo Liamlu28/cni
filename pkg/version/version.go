@@ -39,13 +39,13 @@ var (
 	All    = PluginSupports("0.1.0", "0.2.0", "0.3.0", "0.3.1", "0.4.0", "1.0.0", "1.1.0")
 )
 
-// VersionsFrom returns a list of versions starting from min, inclusive
-func VersionsStartingFrom(min string) PluginInfo {
+// VersionsFrom returns a list of versions starting from minVer, inclusive
+func VersionsStartingFrom(minVer string) PluginInfo {
 	out := []string{}
 	// cheat, just assume ordered
 	ok := false
 	for _, v := range All.SupportedVersions() {
-		if !ok && v == min {
+		if !ok && v == minVer {
 			ok = true
 		}
 		if ok {
@@ -63,7 +63,7 @@ func NewResult(version string, resultBytes []byte) (types.Result, error) {
 
 // ParsePrevResult parses a prevResult in a NetConf structure and sets
 // the NetConf's PrevResult member to the parsed Result object.
-func ParsePrevResult(conf *types.NetConf) error {
+func ParsePrevResult(conf *types.PluginConf) error {
 	if conf.RawPrevResult == nil {
 		return nil
 	}

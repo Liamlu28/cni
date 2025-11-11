@@ -4,6 +4,9 @@
 
 # CNI - the Container Network Interface
 
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2446/badge)](https://bestpractices.coreinfrastructure.org/projects/2446)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/containernetworking/cni/badge)](https://securityscorecards.dev/viewer/?uri=github.com/containernetworking/cni)
+
 ## What is CNI?
 
 CNI (_Container Network Interface_), a [Cloud Native Computing Foundation](https://cncf.io) project, consists of a specification and libraries for writing plugins to configure network interfaces in Linux containers, along with a number of supported plugins.
@@ -26,7 +29,7 @@ Here are the recordings of two sessions that the CNI maintainers hosted at KubeC
 We welcome contributions, including [bug reports](https://github.com/containernetworking/cni/issues), and code and documentation improvements.
 If you intend to contribute to code or documentation, please read [CONTRIBUTING.md](CONTRIBUTING.md). Also see the [contact section](#contact) in this README.
 
-The CNI project has a [weekly meeting](https://meet.jit.si/CNIMaintainersMeeting). It takes place Mondays at 11:00 US/Eastern. All are welcome to join.
+The CNI project has a [biweekly meeting](https://calendar.google.com/calendar/event?action=TEMPLATE&tmeid=Yzg1NDlibnA5Y2c0Nm5scDI4ZG5udWpmY2JfMjAyNTEwMTNUMTQwMDAwWiAyMmM0NjU1ZjFjMjkzZTg0NDRhNTU2OTVmNDIxODg3MDgwYzc1OWU0YTQ1MjVhYmQ2NTFmYmI2MGVlYTc2YzE5QGc&tmsrc=22c4655f1c293e8444a55695f421887080c759e4a4525abd651fbb60eea76c19%40group.calendar.google.com&scp=ALL) on [jitsi](https://meet.jit.si/CNIMaintainersMeeting) ([notes](https://github.com/containernetworking/meeting-notes)). It takes place Mondays at 10:00 US/Eastern. All are welcome to join.
 
 ## Why develop CNI?
 
@@ -37,7 +40,6 @@ To avoid duplication, we think it is prudent to define a common interface betwee
 
 ## Who is using CNI?
 ### Container runtimes
-- [rkt - container engine](https://coreos.com/blog/rkt-cni-networking.html)
 - [Kubernetes - a system to simplify container operations](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/)
 - [OpenShift - Kubernetes with additional enterprise features](https://github.com/openshift/origin/blob/master/docs/openshift_networking_requirements.md)
 - [Cloud Foundry - a platform for cloud applications](https://github.com/cloudfoundry-incubator/cf-networking-release)
@@ -48,16 +50,13 @@ To avoid duplication, we think it is prudent to define a common interface betwee
 
 ### 3rd party plugins
 - [Project Calico - a layer 3 virtual network](https://github.com/projectcalico/calico)
-- [Weave - a multi-host Docker network](https://github.com/weaveworks/weave)
 - [Contiv Networking - policy networking for various use cases](https://github.com/contiv/netplugin)
 - [SR-IOV](https://github.com/hustcat/sriov-cni)
-- [Cilium - BPF & XDP for containers](https://github.com/cilium/cilium)
-- [Infoblox - enterprise IP address management for containers](https://github.com/infobloxopen/cni-infoblox)
+- [Cilium - eBPF & XDP for containers](https://github.com/cilium/cilium)
 - [Multus - a Multi plugin](https://github.com/k8snetworkplumbingwg/multus-cni)
 - [Romana - Layer 3 CNI plugin supporting network policy for Kubernetes](https://github.com/romana/kube)
 - [CNI-Genie - generic CNI network plugin](https://github.com/Huawei-PaaS/CNI-Genie)
 - [Nuage CNI - Nuage Networks SDN plugin for network policy kubernetes support ](https://github.com/nuagenetworks/nuage-cni)
-- [Silk - a CNI plugin designed for Cloud Foundry](https://github.com/cloudfoundry-incubator/silk)
 - [Linen - a CNI plugin designed for overlay networks with Open vSwitch and fit in SDN/OpenFlow network environment](https://github.com/John-Lin/linen-cni)
 - [Vhostuser - a Dataplane network plugin - Supports OVS-DPDK & VPP](https://github.com/intel/vhost-user-net-plugin)
 - [Amazon ECS CNI Plugins - a collection of CNI Plugins to configure containers with Amazon EC2 elastic network interfaces (ENIs)](https://github.com/aws/amazon-ecs-cni-plugins)
@@ -66,13 +65,11 @@ To avoid duplication, we think it is prudent to define a common interface betwee
 - [Juniper Contrail](https://www.juniper.net/cloud) / [TungstenFabric](https://tungstenfabric.io) -  Provides overlay SDN solution, delivering multicloud networking, hybrid cloud networking, simultaneous overlay-underlay support, network policy enforcement, network isolation, service chaining and flexible load balancing
 - [Knitter - a CNI plugin supporting multiple networking for Kubernetes](https://github.com/ZTE/Knitter)
 - [DANM - a CNI-compliant networking solution for TelCo workloads running on Kubernetes](https://github.com/nokia/danm)
-- [VMware NSX – a CNI plugin that enables automated NSX L2/L3 networking and L4/L7 Load Balancing; network isolation at the pod, node, and cluster level; and zero-trust security policy for your Kubernetes cluster.](https://docs.vmware.com/en/VMware-NSX-T/2.2/com.vmware.nsxt.ncp_kubernetes.doc/GUID-6AFA724E-BB62-4693-B95C-321E8DDEA7E1.html)
 - [cni-route-override - a meta CNI plugin that override route information](https://github.com/redhat-nfvpe/cni-route-override)
 - [Terway - a collection of CNI Plugins based on alibaba cloud VPC/ECS network product](https://github.com/AliyunContainerService/terway)
 - [Cisco ACI CNI - for on-prem and cloud container networking with consistent policy and security model.](https://github.com/noironetworks/aci-containers)
 - [Kube-OVN - a CNI plugin that bases on OVN/OVS and provides advanced features like subnet, static ip, ACL, QoS, etc.](https://github.com/kubeovn/kube-ovn)
 - [Project Antrea - an Open vSwitch k8s CNI](https://github.com/vmware-tanzu/antrea)
-- [OVN4NFV-K8S-Plugin - a OVN based CNI controller plugin to provide cloud native based Service function chaining (SFC), Multiple OVN overlay networking](https://github.com/opnfv/ovn4nfv-k8s-plugin)
 - [Azure CNI - a CNI plugin that natively extends Azure Virtual Networks to containers](https://github.com/Azure/azure-container-networking)
 - [Hybridnet - a CNI plugin designed for hybrid clouds which provides both overlay and underlay networking for containers in one or more clusters. Overlay and underlay containers can run on the same node and have cluster-wide bidirectional network connectivity.](https://github.com/alibaba/hybridnet)
 - [Spiderpool - An IP Address Management (IPAM) CNI plugin of Kubernetes for managing static ip for underlay network](https://github.com/spidernet-io/spiderpool)

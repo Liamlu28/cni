@@ -56,8 +56,12 @@ func (n *IPNet) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NetConfType describes a network.
-type NetConfType struct {
+// Use PluginConf instead of NetConf, the NetConf
+// backwards-compat alias will be removed in a future release.
+type NetConf = PluginConf
+
+// PluginConf describes a plugin configuration for a specific network.
+type PluginConf struct {
 	CNIVersion string `json:"cniVersion,omitempty"`
 
 	Name         string          `json:"name,omitempty"`
@@ -73,9 +77,6 @@ type NetConfType struct {
 	ValidAttachments []GCAttachment `json:"cni.dev/valid-attachments,omitempty"`
 }
 
-// NetConf is defined as different type as custom MarshalJSON() and issue #1096
-type NetConf NetConfType
-
 // GCAttachment is the parameters to a GC call -- namely,
 // the container ID and ifname pair that represents a
 // still-valid attachment.
@@ -86,11 +87,8 @@ type GCAttachment struct {
 
 // Note: DNS should be omit if DNS is empty but default Marshal function
 // will output empty structure hence need to write a Marshal function
-func (n *NetConfType) MarshalJSON() ([]byte, error) {
-	// use type alias to escape recursion for json.Marshal() to MarshalJSON()
-	type fixObjType = NetConf
-
-	bytes, err := json.Marshal(fixObjType(*n))
+func (n *PluginConf) MarshalJSON() ([]byte, error) {
+	bytes, err := json.Marshal(*n)
 	if err != nil {
 		return nil, err
 	}
@@ -120,10 +118,10 @@ func (i *IPAM) IsEmpty() bool {
 type NetConfList struct {
 	CNIVersion string `json:"cniVersion,omitempty"`
 
-	Name         string     `json:"name,omitempty"`
-	DisableCheck bool       `json:"disableCheck,omitempty"`
-	DisableGC    bool       `json:"disableGC,omitempty"`
-	Plugins      []*NetConf `json:"plugins,omitempty"`
+	Name         string        `json:"name,omitempty"`
+	DisableCheck bool          `json:"disableCheck,omitempty"`
+	DisableGC    bool          `json:"disableGC,omitempty"`
+	Plugins      []*PluginConf `json:"plugins,omitempty"`
 }
 
 // Result is an interface that provides the result of plugin execution
@@ -231,7 +229,7 @@ func (r *Route) Copy() *Route {
 }
 
 // Well known error codes
-// see https://github.com/containernetworking/cni/blob/main/SPEC.md#well-known-error-codes
+// see https://github.com/containernetworking/cni/blob/main/SPEC.md#error
 const (
 	ErrUnknown                     uint = iota // 0
 	ErrIncompatibleCNIVersion                  // 1
@@ -243,6 +241,8 @@ const (
 	ErrInvalidNetworkConfig                    // 7
 	ErrInvalidNetNS                            // 8
 	ErrTryAgainLater               uint = 11
+	ErrPluginNotAvailable          uint = 50
+	ErrLimitedConnectivity         uint = 51
 	ErrInternal                    uint = 999
 )
 

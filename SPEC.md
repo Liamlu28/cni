@@ -69,7 +69,7 @@ Released versions of the spec are available as Git tags.
 
 This document proposes a generic plugin-based networking solution for application containers on Linux, the _Container Networking Interface_, or _CNI_.
 
-For the purposes of this proposal, we define three terms very specifically:
+For the purposes of this proposal, we define four terms very specifically:
 - _container_ is a network isolation domain, though the actual isolation technology is not defined by the specification. This could be a [network namespace][namespaces] or a virtual machine, for example.
 - _network_ refers to a group of endpoints that are uniquely addressable that can communicate amongst each other. This could be either an individual container (as specified above), a machine, or some other network device (e.g. a router). Containers can be conceptually _added to_ or _removed from_ one or more networks.
 - _runtime_ is the program responsible for executing CNI plugins.
@@ -109,14 +109,16 @@ A network configuration consists of a JSON object with the following keys:
 
 - `cniVersion` (string): [Semantic Version 2.0](https://semver.org) of CNI specification to which this configuration list and all the individual configurations conform. Currently "1.1.0"
 - `cniVersions` (string list): List of all CNI versions which this configuration supports. See [version selection](#version-selection) below.
-- `name` (string): Network name. This should be unique across all network configurations on a host (or other administrative domain).  Must start with an alphanumeric character, optionally followed by any combination of one or more alphanumeric characters, underscore, dot (.) or hyphen (-).
+- `name` (string): Network name. This should be unique across all network configurations on a host (or other administrative domain).  Must start with an alphanumeric character, optionally followed by any combination of one or more alphanumeric characters, underscore, dot (.) or hyphen (-). Must not contain characters disallowed in file paths.
 - `disableCheck` (boolean): Either `true` or `false`.  If `disableCheck` is `true`, runtimes must not call `CHECK` for this network configuration list.  This allows an administrator to prevent `CHECK`ing where a combination of plugins is known to return spurious errors.
 - `disableGC` (boolean): Either `true` or `false`.  If `disableGC` is `true`, runtimes must not call `GC` for this network configuration list.  This allows an administrator to prevent `GC`ing when it is known that garbage collection may have undesired effects (e.g. shared configuration between multiple runtimes).
-- `plugins` (list): A list of CNI plugins and their configuration, which is a list of plugin configuration objects.
+- `loadOnlyInlinedPlugins` (boolean): Either `true` or `false`. If `false` (default), indicates [plugin configuration objects](#plugin-configuration-objects) can be aggregated from multiple sources. Any valid plugin configuration objects aggregated from other sources must be appended to the final list of `plugins` for that network name. If set to `true`, indicates that valid plugin configuration objects aggregated from sources other than the main network configuration will be ignored. If `plugins` is not present in the network configuration, `loadOnlyInlinedPlugins` cannot be set to `true`.
+- `plugins` (list): A list of inlined [plugin configuration objects](#plugin-configuration-objects). If this key is populated with inlined plugin objects, and `loadOnlyInlinedPlugins` is true, the final set of plugins for a network must consist of all the plugin objects in this list, merged with all the plugins loaded from the sibling folder with the same name as the network.
 
 #### Plugin configuration objects:
-Plugin configuration objects may contain additional fields than the ones defined here.
-The runtime MUST pass through these fields, unchanged, to the plugin, as defined in section 3.
+Runtimes may aggregate plugin configuration objects from multiple sources, and must unambiguously associate each loaded plugin configuration object with a single, valid network configuration. All aggregated plugin configuration objects must be validated, and each plugin with a valid configuration object must be invoked.
+
+Plugin configuration objects may contain additional fields beyond the ones defined here. The runtime MUST pass through these fields, unchanged, to the invoked plugin, as defined in section 3.
 
 **Required keys:**
 - `type` (string): Matches the name of the CNI plugin binary on disk. Must not contain characters disallowed in file paths for the system (e.g. / or \\).
@@ -147,6 +149,7 @@ Plugins that consume any of these configuration keys should respect their intend
 Plugins may define additional fields that they accept and may generate an error if called with unknown fields. Runtimes must preserve unknown fields in plugin configuration objects when transforming for execution.
 
 #### Example configuration
+The following is an example JSON representation of a network configuration `dbnet` with three plugin configurations (`bridge`, `tuning`, and `portmap`).
 ```jsonc
 {
   "cniVersion": "1.1.0",
@@ -158,7 +161,7 @@ Plugins may define additional fields that they accept and may generate an error 
       // plugin specific parameters
       "bridge": "cni0",
       "keyA": ["some more", "plugin specific", "configuration"],
-      
+
       "ipam": {
         "type": "host-local",
         // ipam specific
@@ -265,7 +268,10 @@ A CNI plugin, upon receiving a `DEL` command, should either
 - delete the interface defined by `CNI_IFNAME` inside the container at `CNI_NETNS`, or
 - undo any modifications applied in the plugin's `ADD` functionality
 
-Plugins should generally complete a `DEL` action without error even if some resources are missing.  For example, an IPAM plugin should generally release an IP allocation and return success even if the container network namespace no longer exists, unless that network namespace is critical for IPAM management. While DHCP may usually send a 'release' message on the container network interface, since DHCP leases have a lifetime this release action would not be considered critical and no error should be returned if this action fails. For another example, the `bridge` plugin should delegate the DEL action to the IPAM plugin and clean up its own resources even if the container network namespace and/or container network interface no longer exist.
+A `prevResult` must be supplied to CNI plugins as part of a `DEL` command. For the first plugin in the `DEL` command plugin chain, this `prevResult` will be the final result of the previous `ADD` command.
+Plugins should still return without error if `prevResult` is empty for a `DEL` command, however.
+
+`DEL` command invocations are always considered best-effort - plugins should always complete a `DEL` action without error to the fullest extent possible, even if some resources or state are missing. For example, an IPAM plugin should generally release an IP allocation and return success even if the container network namespace no longer exists, unless that network namespace is critical for IPAM management. While DHCP may usually send a 'release' message on the container network interface, since DHCP leases have a lifetime this release action would not be considered critical and no error should be returned if this action fails. For another example, the `bridge` plugin should delegate the DEL action to the IPAM plugin and clean up its own resources even if the container network namespace and/or container network interface no longer exist.
 
 Plugins MUST accept multiple `DEL` calls for the same (`CNI_CONTAINERID`, `CNI_IFNAME`) pair, and return success if the interface in question, or any modifications added, are missing.
 
@@ -375,8 +381,6 @@ Resources may, for example, include:
 
 A plugin SHOULD remove as many stale resources as possible. For example, a plugin should remove any IPAM reservations associated with attachments not in the provided list. The plugin MAY assume that the isolation domain (e.g. network namespace) has been deleted, and thus any resources (e.g. network interfaces) therein have been removed.
 
-Garbage collection is a per-network operation. If a plugin manages resources shared across multiple networks, it must only remove stale resources known to belong to the network provided in the `GC `action.
-
 Plugins should generally complete a `GC` action without error. If an error is encountered, a plugin should continue; removing as many resources as possible, and report the errors back to the runtime.
 
 Plugins MUST, additionally, forward any GC calls to delegated plugins they are configured to use (see section 4).
@@ -387,7 +391,7 @@ The runtime MUST NOT use GC as a substitute for DEL. Plugins may be unable to cl
 
 The runtime must provide a JSON-serialized plugin configuration object (defined below) on standard in. It contains an additional key;
 
-- `cni.dev/attachments` (array of objects): The list of **still valid** attachments to this network:
+- `cni.dev/valid-attachments` (array of objects): The list of **still valid** attachments to this network:
     - `containerID` (string): the value of CNI_CONTAINERID as provided during the CNI ADD operation
     - `ifname` (string): the value of CNI_IFNAME as provided during the CNI ADD operation
 
@@ -496,7 +500,7 @@ For attachment-specific operations (ADD, DEL, CHECK), additional field requireme
 - `capabilities`: must not be set
 
 For GC operations:
-- `cni.dev/attachments`: as specified in section 2.
+- `cni.dev/valid-attachments`: as specified in section 2.
 
 All other fields not prefixed with `cni.dev/` should be passed through unaltered.
 
@@ -647,6 +651,8 @@ Error Code|Error Description
  `6`|Failed to decode content. For example, failed to unmarshal network config from bytes or failed to decode version info from string.
  `7`|Invalid network config. If some validations on network configs do not pass, this error will be raised.
  `11`|Try again later. If the plugin detects some transient condition that should clear up, it can use this code to notify the runtime it should re-try the operation later.
+ `50`|The plugin is not available (i.e. cannot service `ADD` requests)
+ `51`|The plugin is not available, and existing containers in the network may have limited connectivity.
 
 In addition, stderr can be used for unstructured output such as logs.
 
